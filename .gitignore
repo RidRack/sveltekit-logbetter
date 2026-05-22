@@ -1,0 +1,20 @@
+node_modules
+dist
+.svelte-kit
+coverage
+.DS_Store
+*.log
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+
+# Claude Code / agent scratch
+.claude/
+CLAUDE.md
+CLAUDE.local.md
+.aider*
+.cursor/
+.cursorrules
+.codex/
+.continue/
+

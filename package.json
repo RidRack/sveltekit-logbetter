@@ -1,0 +1,93 @@
+{
+  "name": "sveltekit-logbetter",
+  "version": "0.1.0",
+  "description": "Forward SvelteKit server logs to the browser console, with clickable source paths, request grouping, and zero runtime dependencies.",
+  "keywords": [
+    "sveltekit",
+    "svelte",
+    "vite",
+    "vite-plugin",
+    "console",
+    "logging",
+    "debug",
+    "devtools",
+    "hmr",
+    "dx"
+  ],
+  "license": "MIT",
+  "author": "Aaron Rickard",
+  "type": "module",
+  "sideEffects": false,
+  "engines": {
+    "node": ">=20"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "!dist/**/*.test.*",
+    "!dist/**/*.map"
+  ],
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./vite": {
+      "types": "./dist/vite.d.ts",
+      "import": "./dist/vite.js"
+    },
+    "./hooks": {
+      "types": "./dist/hooks.d.ts",
+      "import": "./dist/hooks.js"
+    },
+    "./runtime": {
+      "types": "./dist/runtime.d.ts",
+      "import": "./dist/runtime.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/REPLACE_ME/sveltekit-logbetter.git"
+  },
+  "homepage": "https://github.com/REPLACE_ME/sveltekit-logbetter#readme",
+  "bugs": {
+    "url": "https://github.com/REPLACE_ME/sveltekit-logbetter/issues"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": false
+  },
+  "peerDependencies": {
+    "@sveltejs/kit": "^2.20.0",
+    "svelte": "^5.0.0",
+    "vite": "^6.0.0 || ^7.0.0"
+  },
+  "devDependencies": {
+    "@jridgewell/sourcemap-codec": "^1.5.0",
+    "@sveltejs/kit": "^2.20.0",
+    "@types/node": "^22.0.0",
+    "acorn": "^8.16.0",
+    "oxlint": "^0.13.0",
+    "publint": "^0.2.0",
+    "svelte": "^5.0.0",
+    "typescript": "^5.5.0",
+    "vite": "^6.0.0",
+    "vitest": "^2.0.0"
+  },
+  "scripts": {
+    "lint": "oxlint src tests",
+    "lint:fix": "oxlint src tests --fix",
+    "check": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "build": "rm -rf dist && tsc -p tsconfig.build.json",
+    "verify": "pnpm run check && pnpm run lint && pnpm run test && pnpm run build && pnpm exec publint",
+    "prepack": "pnpm run build",
+    "prepublishOnly": "pnpm run verify"
+  }
+}
