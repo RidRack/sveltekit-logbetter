@@ -24,6 +24,10 @@ Forward SvelteKit **server** `console.*` calls to the **browser** console during
    3 logs · 1 warn · 1 error · 200 · 127ms
 ```
 
+Here's what it actually looks like in Chrome DevTools — a server `load` that fanned out to three fake APIs, caught a 429, and emitted a structured `page.rendered` event. Note the clickable `src/...` paths, the expandable object widget, and the `Caused by:` chain on the Error.
+
+![Browser console showing forwarded server logs from a SvelteKit load: clickable source paths, an Error with cause chain, an expandable structured event object, and per-request grouping](docs/console-example.png)
+
 ## Install
 
 ```sh
@@ -427,6 +431,15 @@ No. The transport uses Vite's existing HMR channel, which upgrades to WSS automa
 
 **Why not use `magic-string` / `devalue`?**
 Because shipping zero runtime dependencies is a feature. The hand-rolled editor (~150 LOC) and serializer (~250 LOC) are append-only and well-tested. Nothing in this package leaks into your `node_modules` graph except devDependencies.
+
+## Supply-chain hardening
+
+This repo opts in to two protections by default; if you contribute, your install will respect them automatically:
+
+- **`packageManager: pnpm@10.x` + `engines.pnpm: ">=10"`** — Corepack-friendly, single canonical installer.
+- **`minimum-release-age=20160` (2 weeks) in `.npmrc` + `pnpm.minimumReleaseAge` in `package.json`** — pnpm refuses to install any dependency version published less than 14 days ago. Compromised-publish zero-days don't reach the lockfile while the npm audit signal catches up. Add specific packages to `pnpm.minimumReleaseAgeExclude` if you need a fresher build of one of them for a specific reason.
+- **All `devDependencies` pinned to exact versions.** No `^` or `~` ranges. The lockfile and the manifest agree on a single version per package. Renovate / Dependabot can still propose bumps as PRs; humans approve them.
+- **`peerDependencies` are ranges**, as they must be for consumers to satisfy — but the SemVer floors are documented (`vite ^6 || ^7`, `@sveltejs/kit ^2.20`, `svelte ^5`).
 
 ## License
 

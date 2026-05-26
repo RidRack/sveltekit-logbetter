@@ -19,8 +19,10 @@
   "type": "module",
   "sideEffects": false,
   "engines": {
-    "node": ">=20"
+    "node": ">=20",
+    "pnpm": ">=10"
   },
+  "packageManager": "pnpm@10.33.3",
   "files": [
     "dist",
     "README.md",
@@ -68,16 +70,16 @@
     "vite": "^6.0.0 || ^7.0.0"
   },
   "devDependencies": {
-    "@jridgewell/sourcemap-codec": "^1.5.0",
-    "@sveltejs/kit": "^2.20.0",
-    "@types/node": "^22.0.0",
-    "acorn": "^8.16.0",
-    "oxlint": "^0.13.0",
-    "publint": "^0.2.0",
-    "svelte": "^5.0.0",
-    "typescript": "^5.5.0",
-    "vite": "^6.0.0",
-    "vitest": "^2.0.0"
+    "@jridgewell/sourcemap-codec": "1.5.5",
+    "@sveltejs/kit": "2.59.1",
+    "@types/node": "22.19.19",
+    "acorn": "8.16.0",
+    "oxlint": "0.13.2",
+    "publint": "0.2.12",
+    "svelte": "5.55.5",
+    "typescript": "5.9.3",
+    "vite": "6.4.2",
+    "vitest": "2.1.9"
   },
   "scripts": {
     "lint": "oxlint src tests",
@@ -89,5 +91,9 @@
     "verify": "pnpm run check && pnpm run lint && pnpm run test && pnpm run build && pnpm exec publint",
     "prepack": "pnpm run build",
     "prepublishOnly": "pnpm run verify"
+  },
+  "pnpm": {
+    "minimumReleaseAge": 20160,
+    "minimumReleaseAgeExclude": []
   }
 }
