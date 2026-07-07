@@ -57,15 +57,27 @@ if (import.meta.hot) {
     return true;
   }
 
+  function closeUnattributed() {
+    if (!unattributedOpen) return;
+    console.groupEnd();
+    unattributedOpen = false;
+  }
+
   function flushBuffer(end) {
     const buf = buffers.get(end.r);
     if (!buf) return;
     buffers.delete(end.r);
+    closeUnattributed();
 
     if (!GROUP_BY_REQUEST) {
       for (const e of buf.entries) printEntry(e);
       return;
     }
+
+    const sev = tallySeverity(buf.entries);
+    if (end.errored && !sev.errors) sev.errors = 1;
+    const warns = sev.warns;
+    const errors = sev.errors;
 
     const expand = EXPAND_ON_ERROR && (buf.hasError || end.errored);
     const groupFn = expand ? console.group : console.groupCollapsed;
@@ -77,24 +89,18 @@ if (import.meta.hot) {
       "%c▸ %c" + buf.method + " %c" + buf.url
         + " %c" + Math.round(timing) + "ms"
         + " %c req#" + shortId(end.r)
-        + (expand ? " %c⚠" : ""),
+        + sevFormat(sev),
       styleGroup(),
       styleMethod(),
       styleUrl(),
       timingStyle,
       styleDim(),
+      ...sevStyles(sev),
     ];
-    if (expand) header.push(styleErrorMarker());
 
     groupFn.apply(console, header);
 
-    let warns = 0;
-    let errors = 0;
-    for (const e of buf.entries) {
-      printEntry(e);
-      if (e.t === "warn") warns++;
-      if (e.t === "error" || e.t === "assert") errors++;
-    }
+    for (const e of buf.entries) printEntry(e);
 
     const summary = buf.entries.length + " log" + (buf.entries.length === 1 ? "" : "s")
       + (warns ? " · " + warns + " warn" : "")
@@ -103,6 +109,50 @@ if (import.meta.hot) {
       + (end.errored ? " · threw" : "");
     console.log("%c" + summary, styleSummary());
     console.groupEnd();
+  }
+
+  // Walks a request's entries once, counting error/warn/info both for the
+  // request as a whole and for every nested console.group inside it, so
+  // collapsed headers can surface what they'd otherwise hide. Nested group
+  // entries get a .sev tally attached for printEntry to render.
+  function tallySeverity(entries) {
+    const total = { errors: 0, warns: 0, infos: 0 };
+    const stack = [];
+    for (const e of entries) {
+      if (e.t === "group" || e.t === "groupCollapsed") {
+        e.sev = { errors: 0, warns: 0, infos: 0 };
+        stack.push(e.sev);
+        continue;
+      }
+      if (e.t === "groupEnd") {
+        stack.pop();
+        continue;
+      }
+      const key = (e.t === "error" || e.t === "assert") ? "errors"
+        : e.t === "warn" ? "warns"
+        : e.t === "info" ? "infos"
+        : null;
+      if (!key) continue;
+      total[key]++;
+      for (const g of stack) g[key]++;
+    }
+    return total;
+  }
+
+  function sevFormat(sev) {
+    let fmt = "";
+    if (sev.errors) fmt += " %c✖" + (sev.errors > 1 ? sev.errors : "");
+    if (sev.warns) fmt += " %c⚠" + (sev.warns > 1 ? sev.warns : "");
+    if (sev.infos) fmt += " %cℹ" + (sev.infos > 1 ? sev.infos : "");
+    return fmt;
+  }
+
+  function sevStyles(sev) {
+    const styles = [];
+    if (sev.errors) styles.push(styleErrorMarker());
+    if (sev.warns) styles.push(styleWarnMarker());
+    if (sev.infos) styles.push(styleInfoMarker());
+    return styles;
   }
 
   function handleBatch(payload) {
@@ -173,11 +223,14 @@ if (import.meta.hot) {
       return;
     }
     if (level === "group" || level === "groupCollapsed") {
-      const fn = level === "group" ? console.group : console.groupCollapsed;
+      const sev = entry.sev || { errors: 0, warns: 0, infos: 0 };
+      const expand = level === "group" || (EXPAND_ON_ERROR && sev.errors > 0);
+      const fn = expand ? console.group : console.groupCollapsed;
       fn.apply(console, [
-        "%c" + badge(level) + "%c " + file + ":" + line,
+        "%c" + badge(level) + "%c " + file + ":" + line + sevFormat(sev),
         styleBadge(level),
         styleOrigin(),
+        ...sevStyles(sev),
         ...args,
       ]);
       return;
@@ -380,6 +433,8 @@ function styleTimingFast() { return "color:" + PALETTE.timingFast.fg + ";font-we
 function styleTimingMid() { return "color:" + PALETTE.timingMid.fg + ";font-weight:600;"; }
 function styleTimingSlow() { return "color:" + PALETTE.timingSlow.fg + ";font-weight:600;"; }
 function styleErrorMarker() { return "color:" + PALETTE.error.bg + ";font-weight:700;"; }
+function styleWarnMarker() { return "color:" + PALETTE.warn.bg + ";font-weight:700;"; }
+function styleInfoMarker() { return "color:" + PALETTE.info.bg + ";font-weight:700;"; }
 `;
 }
 

@@ -94,8 +94,9 @@ export interface LogbetterOptions {
   /**
    * Expand the request group automatically if it contains any
    * `error`/`assert` entry (or the request itself threw). Default: `true`.
-   * Set `false` to always collapse — entries are still visible after one
-   * click. Implementation note: groups are buffered until the request
+   * Set `false` to always collapse — the collapsed header still carries
+   * ✖/⚠/ℹ severity markers for what it contains, so nothing is silently
+   * hidden. Implementation note: groups are buffered until the request
    * finishes so the expand decision can be made after the fact; on a long
    * request, individual logs appear when the response ends, not live.
    */

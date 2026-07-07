@@ -12,7 +12,7 @@
 Forward SvelteKit **server** `console.*` calls to the **browser** console during dev. Clickable source paths. Per-request grouping. Classy palette. **Zero runtime dependencies.** Compiles out of production entirely.
 
 ```
-▸  GET /products/42      127ms     req#a31
+▸  GET /products/42      127ms     req#a31   ✖ ⚠
    LOG    src/routes/products/[id]/+page.server.ts:14:3
        Loaded product  ▸ {id: 42, name: "Honda Civic", year: 2019, …}
    WARN   src/server/preload.ts:42:1
@@ -290,7 +290,15 @@ Header timing colours band by speed:
 | 100–500ms | marigold |
 | > 500ms | ruby |
 
-Groups containing any `error`/`assert` entry — or whose request itself threw — **open expanded** so failures aren't hidden. Toggle off with `expandGroupsOnError: false` if you'd rather they always start collapsed. Implementation note: entries are buffered per-request and printed at the response-end signal so the expand decision can be made retroactively; on a long-running request, logs appear when the response ends rather than live.
+The header **always** carries severity markers for what the group contains — `✖` for errors/asserts (with a count when more than one), `⚠` for warns, `ℹ` for infos — so nothing is hidden behind a collapsed group:
+
+```
+▸ GET /api/quote   312ms   req#a31   ✖2 ⚠
+```
+
+Nested `console.group(...)` subgroups inside a request get the same markers on their own headers, counting everything below them.
+
+Groups containing any `error`/`assert` entry — or whose request itself threw — additionally **open expanded** (nested subgroups included) so failures are in your face. Toggle off with `expandGroupsOnError: false` if you'd rather they always start collapsed — the `✖`/`⚠` markers still show on the collapsed header. Implementation note: entries are buffered per-request and printed at the response-end signal so the expand decision can be made retroactively; on a long-running request, logs appear when the response ends rather than live.
 
 Each group ends with a one-line summary: `5 logs · 1 warn · 1 error · 200 · 312ms`.
 
