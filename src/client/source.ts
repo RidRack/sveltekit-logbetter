@@ -17,6 +17,7 @@ export function buildReceiverSource(opts: ResolvedOptions): string {
 const PALETTE = ${palette};
 const GROUP_BY_REQUEST = ${JSON.stringify(groupByRequest)};
 const EXPAND_ON_ERROR = ${JSON.stringify(opts.expandGroupsOnError)};
+const EXPAND_UNATTRIBUTED = ${JSON.stringify(opts.expandUnattributed)};
 const PRETTY_JSON_STRINGS = ${JSON.stringify(prettyJsonStrings)};
 const EDITOR = ${JSON.stringify(editorScheme)};
 const CHANNEL = ${JSON.stringify(CHANNEL)};
@@ -39,14 +40,11 @@ if (import.meta.hot) {
   const seenEntries = new Set();
   const seenStarts = new Set();
   const seenEnds = new Set();
-  let unattributedOpen = false;
-
-  function ensureUnattributed() {
-    if (!GROUP_BY_REQUEST) return;
-    if (unattributedOpen) return;
-    console.groupCollapsed("%c▸ unattributed", styleGroup());
-    unattributedOpen = true;
-  }
+  // Logs emitted outside any request accumulate here and are flushed as a
+  // single, self-contained group — never a live-open group, so a request
+  // group can never nest inside it, and its collapsed/expanded state plus
+  // severity markers can be decided up front from what it actually holds.
+  let unattributed = [];
 
   function bufferEntry(entry) {
     const buf = buffers.get(entry.r);
@@ -57,17 +55,35 @@ if (import.meta.hot) {
     return true;
   }
 
-  function closeUnattributed() {
-    if (!unattributedOpen) return;
+  // Flush any pending out-of-request logs as one group, giving it the same
+  // severity treatment request groups get: ✖/⚠/ℹ markers on the header, and
+  // an expand when it hides an error. Called before each request group (to
+  // keep ordering and avoid nesting) and at the end of every batch (so
+  // trailing unattributed logs aren't stranded until the next request).
+  function flushUnattributed() {
+    if (!unattributed.length) return;
+    const entries = unattributed;
+    unattributed = [];
+
+    const sev = tallySeverity(entries);
+    const expand = EXPAND_UNATTRIBUTED || (EXPAND_ON_ERROR && sev.errors > 0);
+    const groupFn = expand ? console.group : console.groupCollapsed;
+    groupFn.apply(console, [
+      "%c▸ unattributed" + sevFormat(sev),
+      styleGroup(),
+      ...sevStyles(sev),
+    ]);
+    for (const e of entries) printEntry(e);
     console.groupEnd();
-    unattributedOpen = false;
   }
 
   function flushBuffer(end) {
     const buf = buffers.get(end.r);
     if (!buf) return;
     buffers.delete(end.r);
-    closeUnattributed();
+    // Close out anything unattributed before this request group opens, so the
+    // request group sits at the top level rather than nesting underneath.
+    flushUnattributed();
 
     if (!GROUP_BY_REQUEST) {
       for (const e of buf.entries) printEntry(e);
@@ -184,9 +200,10 @@ if (import.meta.hot) {
         seenEntries.add(e.id);
       }
       if (!bufferEntry(e)) {
-        // No active buffer — print into the unattributed group.
-        ensureUnattributed();
-        printEntry(e);
+        // No active buffer. When grouping by request, hold it so it can be
+        // flushed as a marked group; otherwise just print it live.
+        if (GROUP_BY_REQUEST) unattributed.push(e);
+        else printEntry(e);
       }
     }
 
@@ -197,6 +214,10 @@ if (import.meta.hot) {
       }
       flushBuffer(end);
     }
+
+    // Flush trailing out-of-request logs so they aren't stranded off-screen
+    // until some later request happens to close them out.
+    flushUnattributed();
   }
 
   function printEntry(entry) {

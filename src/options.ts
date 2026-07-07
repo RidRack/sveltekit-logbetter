@@ -102,6 +102,13 @@ export interface LogbetterOptions {
    */
   expandGroupsOnError?: boolean;
   /**
+   * Always open the synthetic `▸ unattributed` group (logs emitted outside a
+   * request) expanded, rather than collapsed. Default: `false`. When `false`
+   * it still expands automatically if it contains an error (subject to
+   * `expandGroupsOnError`), and always carries ✖/⚠/ℹ severity markers.
+   */
+  expandUnattributed?: boolean;
+  /**
    * Try to parse string args that look like JSON and render them as objects.
    * Default: `true`.
    */
@@ -139,6 +146,7 @@ export interface ResolvedOptions {
   editor: EditorResolver;
   groupByRequest: boolean;
   expandGroupsOnError: boolean;
+  expandUnattributed: boolean;
   prettyJsonStrings: boolean;
   maxArgBytes: number;
   maxDepth: number;
@@ -186,6 +194,7 @@ export function resolveOptions(opts: LogbetterOptions = {}): ResolvedOptions {
     editor,
     groupByRequest: opts.groupByRequest ?? true,
     expandGroupsOnError: opts.expandGroupsOnError ?? true,
+    expandUnattributed: opts.expandUnattributed ?? false,
     prettyJsonStrings: opts.prettyJsonStrings ?? true,
     maxArgBytes: opts.maxArgBytes ?? 100_000,
     maxDepth: opts.maxDepth ?? 12,

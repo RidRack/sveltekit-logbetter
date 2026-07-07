@@ -193,4 +193,86 @@ describe("client receiver behavior", () => {
     expect(closed).toBeGreaterThan(unattributed);
     expect(requestGroup).toBeGreaterThan(closed);
   });
+
+  it("surfaces severity markers on the unattributed group header", () => {
+    const { calls, dispatch } = runReceiver(
+      resolveOptions({ expandGroupsOnError: false }),
+    );
+    dispatch({
+      starts: [],
+      entries: [
+        // No request id — all land in the unattributed group.
+        { id: 1, t: "error", f: "a.ts", l: 1, c: 1, a: NO_ARGS },
+        { id: 2, t: "error", f: "a.ts", l: 2, c: 1, a: NO_ARGS },
+        { id: 3, t: "warn", f: "a.ts", l: 3, c: 1, a: NO_ARGS },
+        { id: 4, t: "info", f: "a.ts", l: 4, c: 1, a: NO_ARGS },
+      ],
+      ends: [],
+    });
+    const header = calls.find(
+      (c) => c.fn === "groupCollapsed" || c.fn === "group",
+    );
+    expect(header).toBeDefined();
+    const fmt = header!.args[0] as string;
+    expect(fmt).toContain("▸ unattributed");
+    expect(fmt).toContain("✖2");
+    expect(fmt).toContain("⚠");
+    expect(fmt).toContain("ℹ");
+  });
+
+  it("expands the unattributed group when it hides an error", () => {
+    const { calls, dispatch } = runReceiver();
+    dispatch({
+      starts: [],
+      entries: [{ id: 1, t: "error", f: "a.ts", l: 1, c: 1, a: NO_ARGS }],
+      ends: [],
+    });
+    const expanded = calls.find((c) => c.fn === "group");
+    expect(expanded).toBeDefined();
+    expect(expanded!.args[0]).toContain("▸ unattributed");
+    // No error → stays collapsed, still marked.
+    const { calls: calls2, dispatch: dispatch2 } = runReceiver();
+    dispatch2({
+      starts: [],
+      entries: [{ id: 1, t: "warn", f: "a.ts", l: 1, c: 1, a: NO_ARGS }],
+      ends: [],
+    });
+    expect(calls2.find((c) => c.fn === "group")).toBeUndefined();
+    expect(calls2.find((c) => c.fn === "groupCollapsed")).toBeDefined();
+  });
+
+  it("always expands the unattributed group when expandUnattributed is set", () => {
+    const { calls, dispatch } = runReceiver(
+      // Error-expand off, so only expandUnattributed can open it.
+      resolveOptions({ expandUnattributed: true, expandGroupsOnError: false }),
+    );
+    dispatch({
+      starts: [],
+      entries: [{ id: 1, t: "log", f: "a.ts", l: 1, c: 1, a: NO_ARGS }],
+      ends: [],
+    });
+    const expanded = calls.find((c) => c.fn === "group");
+    expect(expanded).toBeDefined();
+    expect(expanded!.args[0]).toContain("▸ unattributed");
+    expect(calls.find((c) => c.fn === "groupCollapsed")).toBeUndefined();
+  });
+
+  it("stacks contiguous unattributed entries into a single group", () => {
+    const { calls, dispatch } = runReceiver();
+    dispatch({
+      starts: [],
+      entries: [
+        { id: 1, t: "log", f: "a.ts", l: 1, c: 1, a: NO_ARGS },
+        { id: 2, t: "log", f: "a.ts", l: 2, c: 1, a: NO_ARGS },
+        { id: 3, t: "log", f: "a.ts", l: 3, c: 1, a: NO_ARGS },
+      ],
+      ends: [],
+    });
+    const opened = calls.filter(
+      (c) => c.fn === "group" || c.fn === "groupCollapsed",
+    );
+    const ended = calls.filter((c) => c.fn === "groupEnd");
+    expect(opened).toHaveLength(1);
+    expect(ended).toHaveLength(1);
+  });
 });

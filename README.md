@@ -255,6 +255,7 @@ sveltekitLogbetter({
   editor: "vscode",          // "vscode" | "vscode-insiders" | "cursor" | "webstorm" | "idea" | "sublime" | "none" | (file,line,col)=>string
   groupByRequest: true,      // group by request id (needs hooks)
   expandGroupsOnError: true, // auto-expand request groups that contain errors
+  expandUnattributed: false, // always expand the synthetic "unattributed" group
   prettyJsonStrings: true,   // auto-parse JSON-shaped strings
   maxArgBytes: 100_000,      // per-arg cap (truncation marker if exceeded)
   maxDepth: 12,
@@ -302,7 +303,7 @@ Groups containing any `error`/`assert` entry — or whose request itself threw �
 
 Each group ends with a one-line summary: `5 logs · 1 warn · 1 error · 200 · 312ms`.
 
-Logs emitted **outside** a request (top-of-module side effects, `init()` hooks) land in a synthetic `▸ unattributed` group.
+Logs emitted **outside** a request (top-of-module side effects, `init()` hooks) land in a synthetic `▸ unattributed` group. It carries the same `✖`/`⚠`/`ℹ` severity markers as request groups and **opens expanded** when it contains an error, so an out-of-request failure is never hidden behind a collapsed header. Set `expandUnattributed: true` to always open it expanded.
 
 ## Data presentation
 
